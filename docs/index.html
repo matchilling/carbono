@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta content='text/html; charset=utf-8' http-equiv='Content-Type'>
+    <title>CO2 Meter</title>
+    <link href='https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css' rel='stylesheet' type='text/css'>
+    <link href='https://metricsgraphicsjs.org/metricsgraphics.css' rel='stylesheet' type='text/css'>
+
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="https://metricsgraphicsjs.org/metricsgraphics.min.js"></script>
+    <script src="https://metricsgraphicsjs.org/js/lib/highlight.pack.js"></script>
+
+    <style>
+      body {
+          width: 100%;
+          height: 100%;
+      }
+
+      #root {
+          margin: 0 auto;
+          max-width: 800px;
+      }
+
+      .graph {
+        text-align: center;
+        margin: 10px auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <section>
+        <h3>Carbon dioxide</h3>
+        <div class="graph" id="co2"></div>
+        <p class="lead">What are safe levels of CO and CO2 in rooms?</p>
+        <table class="table">
+          <tbody>
+            <tr>
+              <th scope="row"></th>
+              <td>250 - 350 ppm</td>
+              <td>Normal background concentration in outdoor ambient air.</td>
+            </tr>
+            <tr>
+              <th scope="row"></th>
+              <td>350 - 1,000 ppm</td>
+              <td>Concentrations typical of occupied indoor spaces with good air exchange.</td>
+            </tr>
+            <tr>
+              <th scope="row"></th>
+              <td>1,000 - 2,000 ppm</td>
+              <td>Complaints of drowsiness and poor air.</td>
+            </tr>
+            <tr>
+              <th scope="row"></th>
+              <td>2,000 - 5,000 ppm</td>
+              <td>Headaches, sleepiness and stagnant, stale, stuffy air. Poor concentration, loss of attention, increased heart rate and slight nausea may also be present.</td>
+            </tr>
+            <tr>
+              <th scope="row"></th>
+              <td>5,000</td>
+              <td>Workplace exposure limit (as 8-hour TWA) in most jurisdictions..</td>
+            </tr>
+            <tr>
+              <th scope="row"></th>
+              <td>&gt;40,000 ppm</td>
+              <td>Exposure may lead to serious oxygen deprivation resulting in permanent brain damage, coma, even death.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+    <script>
+      const gist = '7ea2bda043807e5d9d474add79dc37f2';
+      const file = 'co2-meter-team-red.json';
+      const refreshRateInSeconds = 5;
+
+      const createGraph = (title, target, data)=> {
+        MG.data_graphic({
+            title,
+            data,
+            width: 800,
+            height: 300,
+            target,
+            x_accessor: 'date',
+            y_accessor: 'value',
+        })
+      };
+
+      const filterLast24Hours = (dataPoint) => {
+        const timeStamp = Math.round(new Date().getTime() / 1000);
+        const timeStampYesterday = timeStamp - (24 * 3600);
+
+        return dataPoint.date >= new Date(timeStampYesterday * 1000).getTime();
+      };
+
+      const fetchLatestGistRevision = async (gist) => {
+        const response = await fetch(`https://api.github.com/gists/${gist}`);
+        const json = await response.json();
+
+        return json.files[file].raw_url;
+      };
+
+      const fetchGistData = async (gistUrl) => {
+        const response = await fetch(gistUrl);
+        const json = await response.json();
+
+        return json.map(dataPoint => {
+          return {
+            date: new Date(dataPoint.createdAt * 1000),
+            value: dataPoint.CO2
+          }
+        }).filter(filterLast24Hours);
+      };
+
+      const createCO2Graph = async () => {
+        const gistUrl = await fetchLatestGistRevision(gist);
+        const data = await fetchGistData(gistUrl);
+
+        createGraph('CO2 Meter - last 24h', '#co2', data.filter(filterLast24Hours));
+      };
+
+      createCO2Graph();
+      setInterval(()=> createCO2Graph(), refreshRateInSeconds * 1000);
+    </script>
+  </body>
+</html>

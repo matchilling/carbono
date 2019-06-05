@@ -34,6 +34,7 @@
     <div id="root">
       <section>
         <h3>🔥 Carbono - The Team Red CO₂ Meter</h3>
+        <small>Last update: <span id="last-update"></span></small>
         <div class="graph" id="graph-co2-last-24h"></div>
         <div class="graph" id="graph-co2-last-week"></div>
         <p class="lead">What are safe levels of CO and CO₂ in rooms?</p>
@@ -134,6 +135,10 @@
       const main = async () => {
         const gistUrl = await fetchLatestGistRevision(gist);
         const data = await fetchGistData(gistUrl);
+
+        document.getElementById('last-update').innerHTML = (new Date())
+          .toString()
+          .substring(0, 24);
 
         createGraphic(
           "CO₂ - last 24h",

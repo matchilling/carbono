@@ -149,7 +149,7 @@
 
         return json.map(dataPoint => {
           return {
-            date: new Date(dataPoint.createdAt * 1000),
+            date: new Date(dataPoint.time * 1000),
             value: dataPoint.eCO2
           };
         });

@@ -27,6 +27,14 @@
         text-align: center;
         margin: 50px auto 20px;
       }
+
+      .hidded {
+        display: none;
+      }
+
+      .info-wrapper {
+        margin: 40px 0 0 0;
+      }
     </style>
   </head>
   <body>
@@ -34,9 +42,20 @@
     <div id="root">
       <section>
         <h3>🔥 Carbono - The Team Red CO₂ Meter</h3>
-        <small>Last update: <span id="last-update"></span></small>
-        <div class="graph" id="graph-co2-last-24h"></div>
-        <div class="graph" id="graph-co2-last-week"></div>
+        <div class="info-wrapper">
+          <div class="alert alert-danger hidden" role="alert" id="http-alert">asdf</div>
+          <small class="hidded" id="last-update-text">Last update: <span id="last-update"></span></small>
+        </div>
+        <div class="graph" id="graph-co2-last-24h">
+          <div class="alert alert-warning hidden" role="alert" id="graph-co2-last-24h-alert">
+            <strong>No data points available for the last 24 hours.</strong>
+          </div>
+        </div>
+        <div class="graph" id="graph-co2-last-week">
+          <div class="alert alert-warning hidden" role="alert" id="graph-co2-last-week-alert">
+            <strong>No data points available for the last week.</strong>
+          </div>
+        </div>
         <p class="lead">What are safe levels of CO and CO₂ in rooms?</p>
         <p>Exposure to CO₂ can produce a variety of health effects. These may include headaches, dizziness, restlessness, a tingling or pins or needles feeling, difficulty breathing, sweating, tiredness, increased heart rate, elevated blood pressure, coma, asphyxia, and convulsions.</p>
         <p>The levels of CO₂ in the air and potential health problems are:</p>
@@ -90,6 +109,10 @@
     </div>
     <script>
       const gist = "7ea2bda043807e5d9d474add79dc37f2";
+      const dataSourceUrl =
+        new URLSearchParams(window.location.search).get("dataSourceUrl") ||
+        `https://api.github.com/gists/${gist}`;
+
       const file = "carbono.json";
       const refreshRateInSeconds = 5;
 
@@ -97,7 +120,7 @@
         MG.data_graphic({
           title,
           data,
-          color: ['#ff8758'],
+          color: ["#ff8758"],
           width: 800,
           height: 300,
           target,
@@ -120,36 +143,77 @@
         return json.files[file].raw_url;
       };
 
-      const fetchGistData = async gistUrl => {
-        const response = await fetch(gistUrl);
+      const fetchData = async url => {
+        const response = await fetch(url);
         const json = await response.json();
 
         return json.map(dataPoint => {
           return {
             date: new Date(dataPoint.createdAt * 1000),
-            value: dataPoint.CO2
+            value: dataPoint.eCO2
           };
         });
       };
 
       const main = async () => {
-        const gistUrl = await fetchLatestGistRevision(gist);
-        const data = await fetchGistData(gistUrl);
+        const httpErrorHandler = error => {
+          if (error.message === "Failed to fetch") {
+            const url = new URLSearchParams(window.location.search).has("url")
+              ? new URLSearchParams(window.location.search).get("url")
+              : gistUrl;
 
-        document.getElementById('last-update').innerHTML = (new Date())
-          .toString()
-          .substring(0, 24);
+            const httpAlert = document.getElementById("http-alert");
+            httpAlert.textContent = `Failed to fetch data, check your data source ("${url}").`;
+            httpAlert.classList.remove("hidden");
 
-        createGraphic(
-          "CO₂ - last 24h",
-          "#graph-co2-last-24h",
-          data.filter(data => filterLastNHours(24, data))
-        );
-        createGraphic(
-          "CO₂ - last week",
-          "#graph-co2-last-week",
-          data.filter(data => filterLastNHours(168, data))
-        );
+            const lastUpdateText = document.getElementById("last-update-text");
+            lastUpdateText.classList.add("hidden");
+          }
+        };
+
+        let data;
+        if (new URLSearchParams(window.location.search).has("url")) {
+          const url = new URLSearchParams(window.location.search).get("url");
+          data = await fetchData(url).catch(httpErrorHandler);
+        } else {
+          const gistUrl = await fetchLatestGistRevision(gist);
+          data = await fetchData(gistUrl).catch(httpErrorHandler);
+        }
+
+        document.getElementById("last-update-text").classList.remove("hidden");
+        document.getElementById(
+          "last-update"
+        ).innerHTML = new Date().toString().substring(0, 24);
+
+        const dataLast24 = filterLastNHours(24, data);
+        if (Boolean(dataLast24)) {
+          const element = document.getElementById("graph-co2-last-24h-alert");
+          element.classList.add("hidden");
+
+          createGraphic(
+            "CO₂ - last 24h",
+            "#graph-co2-last-24h",
+            data.filter(data => dataLast24)
+          );
+        } else {
+          const element = document.getElementById("graph-co2-last-24h-alert");
+          element.classList.remove("hidden");
+        }
+
+        const dataWeek = filterLastNHours(24, data);
+        if (Boolean(dataWeek)) {
+          const element = document.getElementById("graph-co2-last-week-alert");
+          element.classList.add("hidden");
+
+          createGraphic(
+            "CO₂ - last week",
+            "#graph-co2-last-week",
+            data.filter(data => dataWeek)
+          );
+        } else {
+          const element = document.getElementById("graph-co2-last-week-alert");
+          element.classList.remove("hidden");
+        }
       };
 
       main();

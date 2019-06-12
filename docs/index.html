@@ -129,11 +129,13 @@
         });
       };
 
-      const filterLastNHours = (hours, dataPoint) => {
+      const filterLastNHours = (hours, data) => {
         const timeStamp = Math.round(new Date().getTime() / 1000);
         const timeStampPast = timeStamp - hours * 3600;
 
-        return dataPoint.date >= new Date(timeStampPast * 1000).getTime();
+        return data.filter(dataPoint => {
+          return dataPoint.date.getTime() / 1000 >= timeStampPast;
+        });
       };
 
       const fetchLatestGistRevision = async gist => {
@@ -186,29 +188,29 @@
         ).innerHTML = new Date().toString().substring(0, 24);
 
         const dataLast24 = filterLastNHours(24, data);
-        if (Boolean(dataLast24)) {
+        if (dataLast24.length > 0) {
           const element = document.getElementById("graph-co2-last-24h-alert");
           element.classList.add("hidden");
 
           createGraphic(
             "CO₂ - last 24h",
             "#graph-co2-last-24h",
-            data.filter(data => dataLast24)
+            dataLast24
           );
         } else {
           const element = document.getElementById("graph-co2-last-24h-alert");
           element.classList.remove("hidden");
         }
 
-        const dataWeek = filterLastNHours(24, data);
-        if (Boolean(dataWeek)) {
+        const dataWeek = filterLastNHours(168, data);
+        if (dataWeek.length > 0) {
           const element = document.getElementById("graph-co2-last-week-alert");
           element.classList.add("hidden");
 
           createGraphic(
             "CO₂ - last week",
             "#graph-co2-last-week",
-            data.filter(data => dataWeek)
+            dataWeek
           );
         } else {
           const element = document.getElementById("graph-co2-last-week-alert");

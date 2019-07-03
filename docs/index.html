@@ -97,6 +97,26 @@
           <strong>Everyone's Reaction is Different</strong>
           <p>A person's reaction to chemicals depends on several things, including individual health, heredity, previous exposure to chemicals including medicines, and personal habits such as smoking or drinking. It’s also important to consider the length of exposure to the chemical, the amount of chemical exposure, and whether the chemical was inhaled, touched, or eaten.</p>
         </div>
+        <div class="graph" id="graph-temp-last-24h">
+          <div class="alert alert-warning hidden" role="alert" id="graph-temp-last-24h-alert">
+            <strong>No data points available for the last 24 hours.</strong>
+          </div>
+        </div>
+        <div class="graph" id="graph-humidity-last-24h">
+          <div class="alert alert-warning hidden" role="alert" id="graph-humidity-last-24h-alert">
+            <strong>No data points available for the last 24 hours.</strong>
+          </div>
+        </div>
+        <div class="graph" id="graph-pressure-last-24h">
+          <div class="alert alert-warning hidden" role="alert" id="graph-pressure-last-24h-alert">
+            <strong>No data points available for the last 24 hours.</strong>
+          </div>
+        </div>
+        <div class="graph" id="graph-TVOC-last-24h">
+          <div class="alert alert-warning hidden" role="alert" id="graph-TVOC-last-24h-alert">
+            <strong>No data points available for the last 24 hours.</strong>
+          </div>
+        </div>
         <h4>References</h4>
         <ol>
           <li><a href="https://ohsonline.com/Articles/2016/04/01/Carbon-Dioxide-Detection-and-Indoor-Air-Quality-Control.aspx?Page=1" target="_blank">https://ohsonline.com/Articles/2016/04/01/Carbon-Dioxide-Detection-and-Indoor-Air-Quality-Control.aspx?Page=1</a></li>
@@ -133,8 +153,10 @@
         const timeStamp = Math.round(new Date().getTime() / 1000);
         const timeStampPast = timeStamp - hours * 3600;
 
-        return data.filter(dataPoint => {
-          return dataPoint.date.getTime() / 1000 >= timeStampPast;
+        return data.map(dataType => {
+          return dataType.filter(dataPoint => {
+            return dataPoint.date.getTime() / 1000 >= timeStampPast;
+          });
         });
       };
 
@@ -148,13 +170,38 @@
       const fetchData = async url => {
         const response = await fetch(url);
         const json = await response.json();
-
-        return json.map(dataPoint => {
+        var processedData = [];
+        processedData[0] = json.map(dataPoint => {
           return {
             date: new Date(dataPoint.time * 1000),
             value: dataPoint.eCO2
           };
         });
+        processedData[1] = json.map(dataPoint => {
+          return {
+            date: new Date(dataPoint.time * 1000),
+            value: dataPoint.temperature_C
+          };
+        });
+        processedData[2] = json.map(dataPoint => {
+          return {
+            date: new Date(dataPoint.time * 1000),
+            value: dataPoint.humidity
+          };
+        });
+        processedData[3] = json.map(dataPoint => {
+          return {
+            date: new Date(dataPoint.time * 1000),
+            value: dataPoint.pressure_hPa
+          };
+        });
+        processedData[4] = json.map(dataPoint => {
+          return {
+            date: new Date(dataPoint.time * 1000),
+            value: dataPoint.TVOC
+          };
+        });
+        return processedData;
       };
 
       const main = async () => {
@@ -187,7 +234,7 @@
           "last-update"
         ).innerHTML = new Date().toString().substring(0, 24);
 
-        const dataLast24 = filterLastNHours(24, data);
+        const dataLast24 = data;
         if (dataLast24.length > 0) {
           const element = document.getElementById("graph-co2-last-24h-alert");
           element.classList.add("hidden");
@@ -195,7 +242,31 @@
           createGraphic(
             "CO₂ - last 24h",
             "#graph-co2-last-24h",
-            dataLast24
+            dataLast24[0]
+          );
+
+          createGraphic(
+            "Temperature - last 24h",
+            "#graph-temp-last-24h",
+            dataLast24[1]
+          );
+
+          createGraphic(
+            "Humidity - last 24h",
+            "#graph-humidity-last-24h",
+            dataLast24[2]
+          );
+
+          createGraphic(
+            "Pressure - last 24h",
+            "#graph-pressure-last-24h",
+            dataLast24[3]
+          );
+
+          createGraphic(
+            "TVOC - last 24h",
+            "#graph-TVOC-last-24h",
+            dataLast24[4]
           );
         } else {
           const element = document.getElementById("graph-co2-last-24h-alert");
@@ -207,11 +278,11 @@
           const element = document.getElementById("graph-co2-last-week-alert");
           element.classList.add("hidden");
 
-          createGraphic(
-            "CO₂ - last week",
-            "#graph-co2-last-week",
-            dataWeek
-          );
+          // createGraphic(
+          //   "CO₂ - last week",
+          //   "#graph-co2-last-week",
+          //   dataWeek
+          // );
         } else {
           const element = document.getElementById("graph-co2-last-week-alert");
           element.classList.remove("hidden");
